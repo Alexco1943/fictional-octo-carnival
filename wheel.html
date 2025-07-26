@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Picker Wheel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f5f5f5;
+    }
+
+    canvas {
+      border: 5px solid #333;
+      border-radius: 50%;
+      margin-top: 20px;
+    }
+
+    button {
+      font-size: 20px;
+      padding: 10px 20px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    #enable-sound-btn {
+      background-color: #2196F3;
+      color: white;
+    }
+
+    #spin-btn {
+      background-color: #4CAF50;
+      color: white;
+      display: none;
+    }
+
+    #winner {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎡 Student Picker Wheel</h1>
+  <canvas id="wheel" width="400" height="400"></canvas><br>
+
+  <button id="enable-sound-btn">🔊 Enable Sound</button>
+  <button id="spin-btn">🎯 Spin</button>
+
+  <div id="winner"></div>
+
+  <script>
+    const names = ["ANDRES", "CYNTIA", "CHARLIE", "CLAUDIA", "ELENA", "SAMUEL", "OMAR", "TOMAS", "FLOR", "MARIA"];
+    const colors = ["#FF6384", "#36A2EB", "#FFCE56", "#8E44AD", "#1ABC9C", "#F39C12", "#2ECC71", "#E74C3C", "#D35400", "#9B59B6"];
+
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const center = canvas.width / 2;
+    const radius = center - 10;
+    const winnerDiv = document.getElementById("winner");
+    const enableBtn = document.getElementById("enable-sound-btn");
+    const spinBtn = document.getElementById("spin-btn");
+
+    let angle = 0;
+    let spinning = false;
+    let velocity = 0;
+
+    const spinSound = new Audio("https://cdn.pixabay.com/audio/2022/03/15/audio_91f0110e9a.mp3");
+    const fanfareSound = new Audio("https://cdn.pixabay.com/audio/2021/09/27/audio_14e7881b20.mp3");
+
+    spinSound.preload = "auto";
+    fanfareSound.preload = "auto";
+
+    // Ensure both audio elements are unmuted
+    spinSound.muted = false;
+    fanfareSound.muted = false;
+
+    enableBtn.addEventListener("click", async () => {
+      try {
+        // Attempt to play/pause to "unlock" both sounds
+        await spinSound.play();
+        spinSound.pause();
+        await fanfareSound.play();
+        fanfareSound.pause();
+
+        enableBtn.style.display = "none";
+        spinBtn.style.display = "inline-block";
+      } catch (err) {
+        alert("⚠️ Sound couldn't be enabled. Please try clicking again or check browser permissions.");
+        console.error("Audio unlock error:", err);
+      }
+    });
+
+    spinBtn.addEventListener("click", spinWheel);
+
+    function drawWheel() {
+      const arc = (2 * Math.PI) / names.length;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < names.length; i++) {
+        const start = angle + i * arc;
+        const end = start + arc;
+
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, radius, start, end);
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        ctx.closePath();
+
+        // Text
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(start + arc / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "white";
+        ctx.font = "bold 16px Arial";
+        ctx.fillText(names[i], radius - 10, 0);
+        ctx.restore();
+      }
+
+      // Pointer
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.moveTo(center - 10, 10);
+      ctx.lineTo(center + 10, 10);
+      ctx.lineTo(center, 40);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function spinWheel() {
+      if (spinning) return;
+      spinning = true;
+      velocity = Math.random() * 0.3 + 0.3;
+
+      // Restart and play spin sound
+      spinSound.currentTime = 0;
+      spinSound.play().catch(err => {
+        console.warn("Spin sound failed to play:", err);
+      });
+
+      winnerDiv.textContent = "";
+      requestAnimationFrame(animateSpin);
+    }
+
+    function animateSpin() {
+      angle += velocity;
+      velocity *= 0.985;
+
+      drawWheel();
+
+      if (velocity < 0.002) {
+        spinSound.pause();
+        spinning = false;
+        const arc = (2 * Math.PI) / names.length;
+        const pointerAngle = (3 * Math.PI / 2 - angle) % (2 * Math.PI);
+        const index = Math.floor((pointerAngle + 2 * Math.PI) % (2 * Math.PI) / arc);
+        const winner = names[index];
+        winnerDiv.textContent = `🎉 Winner: ${winner}`;
+
+        fanfareSound.currentTime = 0;
+        fanfareSound.play().catch(err => {
+          console.warn("Fanfare sound failed to play:", err);
+        });
+      } else {
+        requestAnimationFrame(animateSpin);
+      }
+    }
+
+    drawWheel();
+  </script>
+
+</body>
+</html>
